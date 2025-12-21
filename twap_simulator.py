@@ -39,8 +39,8 @@ class TWAPSimulator:
         if n_snapshots == 0:
             return None
         
-        # 计算每个时刻的计划下单量（均匀分配）
-        planned_volume_per_slice = target_volume / n_snapshots
+        # 计算每个时刻的计划下单量（均匀分配，向下取整）
+        planned_volume_per_slice = int(target_volume // n_snapshots)
         
         # 交易记录
         trades = []
@@ -52,9 +52,9 @@ class TWAPSimulator:
             
             # 如果是最后一个时刻，必须完成所有剩余订单
             if is_last:
-                planned_volume = remaining_volume
+                planned_volume = int(remaining_volume)  # 确保是整数
             else:
-                planned_volume = min(planned_volume_per_slice, remaining_volume)
+                planned_volume = int(min(planned_volume_per_slice, remaining_volume))  # 确保是整数
             
             # 获取流动性限制
             if self.direction == 'buy':
@@ -64,15 +64,15 @@ class TWAPSimulator:
                 available_volume = row['bid1_v']  # 卖出受买一量限制
                 price = row['bid1_p']  # 按买一价成交
             
-            # 实际可执行的量
+            # 实际可执行的量（必须是整数）
             if is_last:
                 # 最后时刻强制成交，即使超过流动性
-                executed_volume = planned_volume
+                executed_volume = int(planned_volume)
                 is_emergency = (planned_volume > available_volume)
                 
                 if is_emergency:
                     # 计算额外成本
-                    emergency_volume = planned_volume - available_volume
+                    emergency_volume = int(planned_volume - available_volume)
                     emergency_cost_multiplier = 1 + (self.emergency_cost_bps / 10000)
                     
                     if self.direction == 'buy':
@@ -92,8 +92,8 @@ class TWAPSimulator:
                     weighted_price = price
                     emergency_volume = 0
             else:
-                # 非最后时刻，受流动性限制
-                executed_volume = min(planned_volume, available_volume)
+                # 非最后时刻，受流动性限制（确保是整数）
+                executed_volume = int(min(planned_volume, available_volume))
                 weighted_price = price
                 is_emergency = False
                 emergency_volume = 0
